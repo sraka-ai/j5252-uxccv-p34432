@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>A-Frame OBJ Model Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.2/aframe.min.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      .ui-controls {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.5);
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        text-align: center;
+        z-index: 100;
+      }
+      .ui-controls button {
+        margin: 0 5px;
+        padding: 5px 10px;
+        background: #333;
+        color: white;
+        border: 1px solid #555;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .ui-controls button:hover {
+        background: #444;
+      }
+    </style>
+  </head>
+  <body>
+    <a-scene background="color: #ECECEC">
+      <!-- Asset Management System -->
+      <a-assets>
+        <a-asset-item id="model-obj" src="jupdroplight.obj"></a-asset-item>
+        <a-asset-item id="model-mtl" src="jupdroplight.mtl"></a-asset-item>
+      </a-assets>
+
+      <!-- 3D Model -->
+      <a-entity id="model" 
+                obj-model="obj: #model-obj; mtl: #model-mtl" 
+                position="0 0 -5" 
+                rotation="0 0 0" 
+                scale="1 1 1">
+      </a-entity>
+
+      <!-- Camera -->
+      <a-entity id="camera" camera position="0 1.6 0" look-controls wasd-controls>
+        <a-entity cursor="fuse: false"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                  material="color: white; shader: flat">
+        </a-entity>
+      </a-entity>
+
+      <!-- Lighting -->
+      <a-entity light="type: ambient; color: #BBB; intensity: 0.5"></a-entity>
+      <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="-0.5 1 1"></a-entity>
+      <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="0.5 1 -1"></a-entity>
+    </a-scene>
+
+    <!-- UI Controls -->
+    <div class="ui-controls">
+      <button onclick="rotateModel('left')">Rotate Left</button>
+      <button onclick="zoomModel('in')">Zoom In</button>
+      <button onclick="zoomModel('out')">Zoom Out</button>
+      <button onclick="rotateModel('right')">Rotate Right</button>
+    </div>
+
+    <script>
+      // Wait for the model to load
+      document.addEventListener('DOMContentLoaded', function() {
+        const model = document.getElementById('model');
+        
+        // Center the model (assuming the model is loaded)
+        setTimeout(() => {
+          // Set position to be visible in front of camera
+          model.setAttribute('position', '0 0 -5');
+        }, 1000);
+      });
+
+      // Rotate the model
+      function rotateModel(direction) {
+        const model = document.getElementById('model');
+        const currentRotation = model.getAttribute('rotation');
+        const rotationAmount = direction === 'left' ? 15 : -15;
+        
+        model.setAttribute('rotation', {
+          x: currentRotation.x,
+          y: currentRotation.y + rotationAmount,
+          z: currentRotation.z
+        });
+      }
+
+      // Zoom in/out of the model
+      function zoomModel(direction) {
+        const model = document.getElementById('model');
+        const currentPosition = model.getAttribute('position');
+        const zoomAmount = direction === 'in' ? -0.5 : 0.5;
+        
+        // Don't let the model get too close to the camera
+        if (currentPosition.z + zoomAmount > -1 && direction === 'in') {
+          return;
+        }
+        
+        model.setAttribute('position', {
+          x: currentPosition.x,
+          y: currentPosition.y,
+          z: currentPosition.z + zoomAmount
+        });
+      }
+    </script>
+  </body>
+</html>
