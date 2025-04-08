@@ -97,17 +97,20 @@
       
       <!-- Pattern Marker -->
       <a-marker type="pattern" url="jup.patt" emitevents="true" id="jup-marker">
-        <!-- Container for better positioning -->
-        <a-entity position="0 1.5 0">
-          <!-- Model with animations and glow effect -->
+        <!-- Container for better positioning and floating effect -->
+        <a-entity position="0 2.5 0" id="model-container"
+                  animation="property: position; to: 0 2.6 0; dir: alternate; dur: 4000; easing: easeInOutSine; loop: true">
+          
+          <!-- Model with smooth animations -->
           <a-entity
             id="model"
             obj-model="obj: #model-obj; mtl: #model-mtl"
             material="shader: standard; color: #fff; emissive: #66ccff; emissiveIntensity: 0.9;"
             position="0 0 0"
             scale="1 1 1"
-            animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true"
-            animation__tilt="property: rotation; from: -10 0 -5; to: 10 0 5; dir: alternate; dur: 2000; easing: easeInOutQuad; loop: true">
+            animation="property: rotation; to: 0 360 0; dur: 18000; easing: linear; loop: true"
+            animation__x="property: rotation.x; from: -5; to: 5; dur: 7000; easing: easeInOutSine; loop: true; dir: alternate"
+            animation__z="property: rotation.z; from: -3; to: 3; dur: 5000; easing: easeInOutSine; loop: true; dir: alternate">
           </a-entity>
           
           <!-- Bloom effect light -->
@@ -174,20 +177,6 @@
           // Show instructions when marker is lost
           instructions.style.opacity = '1';
           debugInfo.textContent = "Marker lost, find marker again";
-        });
-        
-        // Add device orientation event to adjust model for device rotation
-        window.addEventListener('deviceorientation', function(event) {
-          if (model && event.beta) {
-            // Limit the tilt based on device orientation
-            const tiltY = Math.min(Math.max(event.beta - 45, -20), 20);
-            // Apply subtle tilt to the model based on device orientation
-            const currentAnimation = model.getAttribute('animation__tilt');
-            if (currentAnimation) {
-              model.setAttribute('animation__tilt', 
-                `property: rotation; from: ${-10 + tiltY / 2} 0 -5; to: ${10 + tiltY / 2} 0 5; dir: alternate; dur: 2000; easing: easeInOutQuad; loop: true`);
-            }
-          }
         });
       });
     </script>
