@@ -10,8 +10,8 @@
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <!-- A-Frame extras for animations -->
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <!-- Post-processing for bloom/glow effect -->
-    <script src="https://unpkg.com/aframe-postprocessing-component/dist/aframe-postprocessing-component.min.js"></script>
+    <!-- A-Frame OBJ loader component -->
+    <script src="https://unpkg.com/aframe-extras@3.13.1/dist/aframe-extras.loaders.min.js"></script>
     
     <style>
       body {
@@ -51,6 +51,18 @@
       #no-ar.hidden {
         display: none;
       }
+      .debug-info {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 999;
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -63,16 +75,19 @@
     <div class="ar-instructions">
       Point camera at the JUP pattern marker
     </div>
+    
+    <div class="debug-info" id="debug-info">
+      Model status: Waiting for marker
+    </div>
 
     <!-- A-Frame Scene with AR.js -->
     <a-scene 
       arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; patternRatio: 0.75;"
       embedded
-      renderer="logarithmicDepthBuffer: true; colorManagement: true; gammaOutput: true;"
-      vr-mode-ui="enabled: false">
+      renderer="logarithmicDepthBuffer: true; colorManagement: true; gammaOutput: true;">
       
       <!-- Assets Management -->
-      <a-assets>
+      <a-assets timeout="10000">
         <a-asset-item id="model-obj" src="jupdroplight.obj"></a-asset-item>
         <a-asset-item id="model-mtl" src="jupdroplight.mtl"></a-asset-item>
       </a-assets>
@@ -82,21 +97,24 @@
       
       <!-- Pattern Marker -->
       <a-marker type="pattern" url="jup.patt" emitevents="true" id="jup-marker">
-        <!-- Model with animations and glow effect -->
-        <a-entity
-          id="model"
-          obj-model="obj: #model-obj; mtl: #model-mtl"
-          position="0 0.5 0"
-          scale="1 1 1"
-          material="emissive: #66ccff; emissiveIntensity: 0.9"
-          animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true"
-          animation__tilt="property: rotation; from: -10 0 -5; to: 10 0 5; dir: alternate; dur: 2000; easing: easeInOutQuad; loop: true">
-        </a-entity>
-        
-        <!-- Bloom effect light -->
-        <a-entity 
-          light="type: point; color: #66ccff; intensity: 2; distance: 3"
-          position="0 1 0">
+        <!-- Container for better positioning -->
+        <a-entity position="0 1.5 0">
+          <!-- Model with animations and glow effect -->
+          <a-entity
+            id="model"
+            obj-model="obj: #model-obj; mtl: #model-mtl"
+            material="shader: standard; color: #fff; emissive: #66ccff; emissiveIntensity: 0.9;"
+            position="0 0 0"
+            scale="1 1 1"
+            animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true"
+            animation__tilt="property: rotation; from: -10 0 -5; to: 10 0 5; dir: alternate; dur: 2000; easing: easeInOutQuad; loop: true">
+          </a-entity>
+          
+          <!-- Bloom effect light -->
+          <a-entity 
+            light="type: point; color: #66ccff; intensity: 2; distance: 3"
+            position="0 0.5 0">
+          </a-entity>
         </a-entity>
       </a-marker>
     </a-scene>
@@ -106,12 +124,41 @@
         // Hide loading screen once AR scene is ready
         const scene = document.querySelector('a-scene');
         const noArDiv = document.getElementById('no-ar');
+        const debugInfo = document.getElementById('debug-info');
+        
+        // For debugging in development
+        // debugInfo.style.display = 'block';
         
         scene.addEventListener('loaded', function() {
           setTimeout(function() {
             noArDiv.classList.add('hidden');
+            debugInfo.textContent = "Scene loaded, waiting for marker";
           }, 1000);
         });
+
+        // Check if assets are loaded
+        const model = document.getElementById('model');
+        if (model) {
+          model.addEventListener('model-loaded', function(e) {
+            debugInfo.textContent = "Model loaded successfully";
+            
+            // Force material update to ensure textures are applied
+            setTimeout(function() {
+              const mesh = model.getObject3D('mesh');
+              if (mesh) {
+                mesh.traverse(function(node) {
+                  if (node.isMesh) {
+                    node.material.needsUpdate = true;
+                  }
+                });
+              }
+            }, 500);
+          });
+          
+          model.addEventListener('model-error', function(e) {
+            debugInfo.textContent = "Error loading model: " + e.detail.message;
+          });
+        }
 
         // Handle marker detection
         const marker = document.getElementById('jup-marker');
@@ -120,16 +167,17 @@
         marker.addEventListener('markerFound', function() {
           // Hide instructions when marker is found
           instructions.style.opacity = '0';
+          debugInfo.textContent = "Marker found, displaying model";
         });
         
         marker.addEventListener('markerLost', function() {
           // Show instructions when marker is lost
           instructions.style.opacity = '1';
+          debugInfo.textContent = "Marker lost, find marker again";
         });
         
         // Add device orientation event to adjust model for device rotation
         window.addEventListener('deviceorientation', function(event) {
-          const model = document.getElementById('model');
           if (model && event.beta) {
             // Limit the tilt based on device orientation
             const tiltY = Math.min(Math.max(event.beta - 45, -20), 20);
